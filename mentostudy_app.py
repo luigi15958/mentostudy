@@ -2,19 +2,26 @@ import streamlit as st
 import openai
 import datetime
 
-st.set_page_config(page_title="Mentostudy - המנטור החכם ללמידה", layout="wide")
+st.set_page_config(page_title="Mentostudy - המנטור שלך ללמידה", layout="wide")
 
-# קלט מפתח API
+# עיצוב RTL לעברית
+st.markdown(
+    "<style>body {direction: rtl; text-align: right;} .stTextInput>div>div>input {text-align: right;} .stTextArea textarea {text-align: right;}</style>",
+    unsafe_allow_html=True
+)
+
+# API key
 api_key = st.sidebar.text_input("🔑 הזן את OpenAI API Key שלך", type="password")
 if api_key:
     openai.api_key = api_key
 
 st.title("Mentostudy 🧠")
-st.write("סוכן הלמידה החכם שלך - מותאם אישית לתחום, לקצב ולסקרנות שלך")
+st.write("המנטור החכם שלך ללמידה מותאמת אישית")
 
 if "stage" not in st.session_state:
     st.session_state.stage = 1
 
+# שלב 1: אפיון
 if st.session_state.stage == 1:
     st.header("שלב 1: אפיון הלומד")
     with st.form("user_profile"):
@@ -29,10 +36,10 @@ if st.session_state.stage == 1:
             subject = st.text_input("תחום הלמידה")
             goal = st.selectbox("מטרת הלמידה", ["למידה חופשית", "פיתוח סקרנות", "הצלחה בבחינת בגרות", "אחר"])
             goal_text = st.text_input("פירוט המטרה (רשות)")
-            deadline = st.date_input("תאריך יעד לסיום התהליך", value=datetime.date.today())
-            uploaded_file = st.file_uploader("העלה קובץ טקסט או PDF", type=["txt", "pdf"])
-            source_link = st.text_input("או הדבק קישור למקור ידע")
-        personal_note = st.text_area("💬 אמור לנו משהו אישי שחשוב לך שנדע כדי להתאים את תהליך הלמידה (למשל: אני רוצה ללמד את הבן שלי לכתוב מספרים)")
+            deadline = st.date_input("תאריך יעד", value=datetime.date.today())
+            source_link = st.text_input("קישור למקור ידע (רשות)")
+            uploaded_file = st.file_uploader("העלה קובץ טקסט / PDF", type=["txt", "pdf"])
+        personal_note = st.text_area("משהו אישי שחשוב שנדע (למשל: אני רוצה ללמד את הבן שלי לכתוב מספרים)")
         submitted = st.form_submit_button("המשך לשלב הבא")
         if submitted:
             st.session_state.profile = {
@@ -43,56 +50,76 @@ if st.session_state.stage == 1:
             }
             st.session_state.stage = 2
 
+# שלב 2: תכנית למידה
 if st.session_state.stage == 2:
     st.header("שלב 2: בניית תכנית הלמידה 📚")
-    with st.spinner("בונה עבורך תכנית מותאמת אישית..."):
+    with st.spinner("בונה תכנית מותאמת אישית..."):
         profile = st.session_state.profile
         prompt = f'''
-        צור תוכנית למידה מותאמת אישית עבור הלומד הבא:
+        צור תכנית למידה עבור לומד/ת בגיל {profile["age"]}, רקע: {profile["background"]}, 
+        ידע קודם {profile["knowledge"]}/5, תחום הלמידה: {profile["subject"]}.
+        מטרה כללית: {profile["goal"]}, פירוט: {profile["goal_text"]}, תאריך יעד: {profile["deadline"]}.
+        פרטים חשובים נוספים: {profile["personal_note"]}
 
-        שם: {profile["name"]}
-        גיל: {profile["age"]}
-        רקע: {profile["background"]}
-        לשון פנייה: {profile["gender"]}
-        ידע קודם: {profile["knowledge"]}/5
-        תחום הלמידה: {profile["subject"]}
-        מטרה כללית: {profile["goal"]}
-        פירוט מטרה: {profile["goal_text"]}
-        תאריך יעד: {profile["deadline"]}
-        קישור למקור ידע: {profile["source_link"]}
-        פרטים נוספים חשובים: {profile["personal_note"]}
+        התכנית צריכה להיות מחולקת לשבועות או שלבים, לכלול משימות, טכניקות למידה אפקטיביות, חיזוק עצמאות בלמידה,
+        שימוש במקורות מגוונים וכלים של בינה מלאכותית (למשל סיכום, המחשה, תרגול).
 
-        צור תוכנית בת 6–8 שבועות שמבוססת על רמת הידע והמטרה, מחולקת לפי שלבים. כל שלב יכלול:
-        - משימות ללמידה עצמאית
-        - חיזוק מיומנויות לומד עצמאי
-        - טכניקות למידה אפקטיביות
-        - שימוש במקורות מרובים
-        - רמזים לאיך ניתן להשתמש בבינה מלאכותית
-
-        כתוב את התכנית בעברית ברורה, ידידותית ללומד.
+        כתוב בעברית ברורה ומעוררת מוטיבציה.
         '''
-
         if api_key:
             try:
                 response = openai.ChatCompletion.create(
                     model="gpt-4",
                     messages=[
-                        {"role": "system", "content": "אתה מנטור למידה מקצועי ומעורר השראה."},
+                        {"role": "system", "content": "אתה מנטור למידה מקצועי ותומך"},
                         {"role": "user", "content": prompt}
                     ],
                     temperature=0.7
                 )
                 plan = response['choices'][0]['message']['content']
+                st.session_state.plan = plan
                 st.markdown("### ✨ תכנית הלמידה שלך:")
                 st.write(plan)
-                st.success("התוכנית מוכנה! בהמשך נוכל לעבור לשלב הליווי")
-                if st.button("אני מוכן/ה להתחיל"):
+                if st.button("אני מוכן/ה לשלב הליווי"):
                     st.session_state.stage = 3
             except Exception as e:
                 st.error(f"שגיאה בהתחברות ל-GPT: {e}")
         else:
-            st.warning("נא להזין מפתח API תקף משמאל כדי להמשיך")
+            st.warning("נא להזין מפתח API בשורת הצד")
 
+# שלב 3: ליווי
 if st.session_state.stage == 3:
-    st.header("שלב 3: ליווי הלמידה (בהמשך הפיתוח)")
-    st.info("בגרסה הבאה נוסיף תזכורות, משוב, המלצות AI ותוצרים חכמים 💡")
+    st.header("שלב 3: ליווי הלמידה 🎯")
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+    if "weekly_tasks" not in st.session_state:
+        st.session_state.weekly_tasks = [
+            {"שבוע": "שבוע 1", "משימה": "היכרות עם הנושא וקריאה ראשונית", "הושלם": False},
+            {"שבוע": "שבוע 2", "משימה": "צפייה בחומר מסכם ותרגול", "הושלם": False},
+            {"שבוע": "שבוע 3", "משימה": "העמקה והפקת תוצר", "הושלם": False},
+        ]
+    st.subheader("משימות שבועיות")
+    for i, task in enumerate(st.session_state.weekly_tasks):
+        completed = st.checkbox(f'{task["שבוע"]}: {task["משימה"]}', value=task["הושלם"], key=f"task_{i}")
+        st.session_state.weekly_tasks[i]["הושלם"] = completed
+
+    st.subheader("שוחח עם מנטו-סטדי")
+    user_input = st.text_area("מה אתה רוצה לשאול או לשתף?")
+    if st.button("שלח"):
+        if user_input and api_key:
+            st.session_state.chat_history.append({"role": "user", "content": user_input})
+            messages = [{"role": "system", "content": "אתה מנטור למידה תומך ומקצועי"}] + st.session_state.chat_history
+            try:
+                response = openai.ChatCompletion.create(
+                    model="gpt-4",
+                    messages=messages,
+                    temperature=0.7
+                )
+                reply = response["choices"][0]["message"]["content"]
+                st.session_state.chat_history.append({"role": "assistant", "content": reply})
+            except Exception as e:
+                st.error(f"שגיאה מהשרת: {e}")
+
+    for msg in reversed(st.session_state.chat_history):
+        speaker = "👤 אתה" if msg["role"] == "user" else "🤖 מנטו-סטדי"
+        st.markdown(f"**{speaker}:** {msg['content']}")
