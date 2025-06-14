@@ -1,0 +1,2 @@
+# mentostudy
+my first agi 
