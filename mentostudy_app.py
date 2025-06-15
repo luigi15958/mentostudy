@@ -1,5 +1,5 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 import datetime
 
 st.set_page_config(page_title="Mentostudy - המנטור שלך ללמידה", layout="wide")
@@ -13,7 +13,7 @@ st.markdown(
 # API key
 api_key = st.sidebar.text_input("🔑 הזן את OpenAI API Key שלך", type="password")
 if api_key:
-    openai.api_key = api_key
+    client = OpenAI(api_key=api_key)
 
 st.title("Mentostudy 🧠")
 st.write("המנטור החכם שלך ללמידה מותאמת אישית")
@@ -67,16 +67,13 @@ if st.session_state.stage == 2:
         כתוב בעברית ברורה ומעוררת מוטיבציה.
         '''
         if api_key:
-            try:
-                response = openai.ChatCompletion.create(
-                    model="gpt-4",
-                    messages=[
-                        {"role": "system", "content": "אתה מנטור למידה מקצועי ותומך"},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.7
+            try:response = client.chat.completions.create(
+               model="gpt-4",
+               messages=messages,
+               temperature=0.7
                 )
-                plan = response['choices'][0]['message']['content']
+                reply = response.choices[0].message.content
+
                 st.session_state.plan = plan
                 st.markdown("### ✨ תכנית הלמידה שלך:")
                 st.write(plan)
